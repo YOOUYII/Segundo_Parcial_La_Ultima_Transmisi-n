@@ -3,7 +3,7 @@
 ## Integrantes
 
 - Integrante 1: [Rodrigo Vazquez Rico]
-- Integrante 2: [Angel Fabian Gutierrez Cruz]
+- Integrante 2: [Angel Fabian Gutierrez Gómez]
 
 ## Versiones requeridas
 
