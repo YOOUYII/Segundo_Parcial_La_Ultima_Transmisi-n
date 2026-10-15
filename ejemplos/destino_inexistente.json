@@ -1,0 +1,15 @@
+{
+  "titulo": "Ejemplo con destino inválido",
+  "inicio": "A",
+  "variables": {},
+  "escenas": [
+    {
+      "id": "A",
+      "texto": "Este archivo sirve para demostrar el diagnóstico de un destino inexistente.",
+      "final": false,
+      "opciones": [
+        {"id": "continuar", "texto": "Continuar", "destino": "E99", "condiciones": {}, "efectos": {}}
+      ]
+    }
+  ]
+}

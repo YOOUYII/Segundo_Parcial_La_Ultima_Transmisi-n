@@ -1,0 +1,35 @@
+{
+  "titulo": "La estación de niebla",
+  "inicio": "S1",
+  "variables": {"codigo_encontrado": false},
+  "escenas": [
+    {
+      "id": "S1",
+      "texto": "Una baliza meteorológica dejó de transmitir. Llegas a la estación durante una noche de niebla.",
+      "final": false,
+      "opciones": [
+        {"id": "entrar", "texto": "Entrar a la estación", "destino": "S2", "condiciones": {}, "efectos": {}}
+      ]
+    },
+    {
+      "id": "S2",
+      "texto": "Un panel muestra un código borrado y una puerta de salida abierta.",
+      "final": false,
+      "opciones": [
+        {"id": "examinar", "texto": "Examinar el panel", "destino": "S3", "condiciones": {"codigo_encontrado": false}, "efectos": {"codigo_encontrado": true}},
+        {"id": "salir", "texto": "Salir sin revisar", "destino": "S3", "condiciones": {"codigo_encontrado": false}, "efectos": {}}
+      ]
+    },
+    {
+      "id": "S3",
+      "texto": "La consola ofrece dos frecuencias. El código recuperado puede identificar la señal correcta.",
+      "final": false,
+      "opciones": [
+        {"id": "frecuencia_segura", "texto": "Usar frecuencia identificada", "destino": "S4", "condiciones": {"codigo_encontrado": true}, "efectos": {}},
+        {"id": "frecuencia_abierta", "texto": "Probar frecuencia abierta", "destino": "S5", "condiciones": {"codigo_encontrado": false}, "efectos": {}}
+      ]
+    },
+    {"id": "S4", "texto": "La baliza recupera contacto con el refugio. El equipo recibe la ubicación.", "final": true, "opciones": []},
+    {"id": "S5", "texto": "La frecuencia abierta reproduce una señal vacía. La estación queda en silencio.", "final": true, "opciones": []}
+  ]
+}
