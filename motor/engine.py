@@ -150,7 +150,7 @@ class Story:
 
 
 class Session:
-    """Sesión de juego de un nivel inicial; el retroceso se incorpora tras la hora 6."""
+    """Sesión de juego con deshacer de una sola elección válida."""
 
     def __init__(self, story: Story):
         self.story = story
@@ -168,6 +168,11 @@ class Session:
     def is_blocked(self) -> bool:
         return not self.scene.final and not self.available_options()
 
+    @property
+    def can_undo(self) -> bool:
+        """Indica si hay una elección válida disponible para deshacer."""
+        return self._undo_state is not None
+
     def available_options(self) -> list[Option]:
         return [
             option for option in self.scene.options
@@ -180,11 +185,21 @@ class Session:
         option = next((item for item in self.available_options() if item.id == option_id), None)
         if option is None:
             raise SessionError(f"La opción '{option_id}' no existe aquí o no está habilitada.")
-        # Las validaciones anteriores ocurren antes de modificar el estado.
+        # Guardar solo después de validar: una entrada inválida conserva el historial.
+        self._undo_state = (self.scene_id, dict(self.variables))
         for name, value in option.effects.items():
             self.variables[name] = value
         self.scene_id = option.destination
 
+    def undo(self) -> None:
+        """Restaura el estado anterior a la última elección válida, una sola vez."""
+        if self._undo_state is None:
+            raise SessionError("No hay una elección válida disponible para deshacer.")
+        self.scene_id, variables = self._undo_state
+        self.variables = dict(variables)
+        self._undo_state = None
+
     def reset(self) -> None:
         self.scene_id = self.story.start
         self.variables = dict(self.story.initial_variables)
+        self._undo_state: tuple[str, dict[str, bool]] | None = None

@@ -1,10 +1,14 @@
-"""Suite automatizada U1-U5 e I1 de la versión previa al cambio de hora 6."""
+"""Suite automatizada U1-U6 e I1 para la versión posterior al cambio de hora 6."""
 import copy
+from contextlib import redirect_stdout
+from io import StringIO
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from main import run
 from motor import Session, SessionError, Story, StoryError
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,9 +106,48 @@ class EngineTests(unittest.TestCase):
         session = Session(Story.load(STORY_PATH))
         session.choose("revisar")
         session.choose("investigar")
+        self.assertTrue(session.can_undo)
         session.reset()
         self.assertEqual(session.scene_id, "E1")
         self.assertEqual(session.variables, {"conoce_origen": False, "confia_en_la_voz": False})
+        self.assertFalse(session.can_undo)
+        with self.assertRaises(SessionError):
+            session.undo()
+
+    def test_u6_undo_restores_state_once_and_rearms_after_valid_choice(self):
+        session = Session(Story.load(STORY_PATH))
+        self.assertFalse(session.can_undo)
+        with self.assertRaises(SessionError):
+            session.undo()
+
+        session.choose("revisar")
+        session.choose("investigar")
+        self.assertEqual(session.scene_id, "E3")
+        self.assertTrue(session.variables["conoce_origen"])
+        self.assertTrue(session.can_undo)
+
+        before_invalid = (session.scene_id, dict(session.variables))
+        for option_id in ("no_existe", "activar_sin_verificar"):
+            with self.subTest(invalid_option=option_id):
+                with self.assertRaises(SessionError):
+                    session.choose(option_id)
+                self.assertEqual((session.scene_id, session.variables), before_invalid)
+                self.assertTrue(session.can_undo)
+
+        session.undo()
+        self.assertEqual(session.scene_id, "E2")
+        self.assertEqual(session.variables, {"conoce_origen": False, "confia_en_la_voz": False})
+        self.assertFalse(session.can_undo)
+        with self.assertRaises(SessionError):
+            session.undo()
+        self.assertEqual(session.scene_id, "E2")
+
+        session.choose("continuar")
+        self.assertEqual(session.scene_id, "E3")
+        self.assertTrue(session.can_undo)
+        session.undo()
+        self.assertEqual(session.scene_id, "E2")
+        self.assertFalse(session.can_undo)
 
     def test_i1_real_history_reaches_each_final(self):
         routes = {
@@ -116,9 +159,16 @@ class EngineTests(unittest.TestCase):
             with self.subTest(final=expected_final):
                 session = Session(Story.load(STORY_PATH))
                 for option_id in route:
+                    if option_id == route[-1]:
+                        state_before_final_choice = (session.scene_id, dict(session.variables))
                     session.choose(option_id)
                 self.assertEqual(session.scene_id, expected_final)
                 self.assertTrue(session.is_final)
+                self.assertTrue(session.can_undo)
+                session.undo()
+                self.assertEqual((session.scene_id, session.variables), state_before_final_choice)
+                self.assertEqual(session.scene_id, "E3")
+                self.assertFalse(session.can_undo)
 
     def test_second_history_works_without_engine_specific_routes(self):
         second = ROOT / "historias" / "estacion_de_niebla.json"
@@ -129,6 +179,18 @@ class EngineTests(unittest.TestCase):
         session.choose("frecuencia_segura")
         self.assertEqual(session.scene_id, "S4")
         self.assertTrue(session.is_final)
+
+    def test_cli_option_named_salir_is_not_treated_as_exit(self):
+        second = ROOT / "historias" / "estacion_de_niebla.json"
+        output = StringIO()
+        with patch("builtins.input", side_effect=["entrar", "salir", "frecuencia_abierta", "u", "q"]):
+            with redirect_stdout(output):
+                result = run(second)
+
+        self.assertEqual(result, 0)
+        self.assertIn("[S5]", output.getvalue())
+        self.assertIn("Última elección deshecha.", output.getvalue())
+        self.assertIn("[S3]", output.getvalue())
 
 
 if __name__ == "__main__":

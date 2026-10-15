@@ -17,23 +17,34 @@ def run(story_path: Path) -> int:
     while True:
         scene = session.scene
         print(f"\n[{scene.id}] {scene.text}")
+        undo_command = "u = deshacer, " if session.can_undo else ""
         if scene.final:
             print("FIN DE LA HISTORIA")
-            print("Comandos: r = reiniciar, q = salir")
+            print(f"Comandos: {undo_command}r = reiniciar, q = salir")
         elif session.is_blocked:
-            print("No hay opciones habilitadas. Puedes reiniciar (r) o salir (q).")
+            print(f"No hay opciones habilitadas. Comandos: {undo_command}r = reiniciar, q = salir.")
         else:
             print("Opciones disponibles:")
             for number, option in enumerate(session.available_options(), start=1):
                 print(f"  {number}. {option.text} [{option.id}]")
-            print("Escribe el número o ID de una opción; r = reiniciar, q = salir")
+            print(f"Escribe el número o ID de una opción; {undo_command}r = reiniciar, q = salir")
 
         answer = input("> ").strip()
-        if answer.lower() in {"q", "salir"}:
+        if answer.lower() == "q" or (
+            answer.lower() == "salir"
+            and not any(option.id.lower() == "salir" for option in scene.options)
+        ):
             return 0
         if answer.lower() in {"r", "reiniciar"}:
             session.reset()
             print("Partida reiniciada.")
+            continue
+        if answer.lower() in {"u", "deshacer", "undo"}:
+            try:
+                session.undo()
+                print("Última elección deshecha.")
+            except SessionError as exc:
+                print(exc)
             continue
         if scene.final or session.is_blocked:
             print("Entrada no válida para este estado. La partida no cambió.")
